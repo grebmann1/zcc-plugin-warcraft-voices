@@ -1,0 +1,37 @@
+{
+  "name": "@zcc-ext/warcraft-voices",
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "zcc": ">=1.0.0",
+    "zccPluginSdk": ">=0.1.0",
+    "node": ">=22.13.0"
+  },
+  "zcc": {
+    "name": "Warcraft Voices",
+    "description": "Warcraft character voice lines for agent input and idle alerts.",
+    "branding": {
+      "icon": "Swords"
+    },
+    "server": "./server.ts",
+    "app": "./app.tsx"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "build": "zcc plugin build .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@zana-ai/zcc-plugin-sdk": "0.1.0",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^19.0.0",
+    "jsdom": "^26.1.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "vitest": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.10",
+    "typescript": "^5.9.0"
+  },
+  "license": "MIT",
+  "private": true
+}

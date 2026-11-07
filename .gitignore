@@ -1,0 +1,10 @@
+node_modules/
+dist/
+app.js
+app.js.map
+app.meta.json
+coverage/
+.test-artifacts/
+server.mjs
+server.meta.json
+*.log
