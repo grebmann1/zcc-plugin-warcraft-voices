@@ -4,6 +4,14 @@ An independent Zana Command Center plugin. Orc Peon, Human Peasant, Orc Grunt an
 
 ## Use
 
+Install from the [public Zana community marketplace](https://opensource.salesforce.com/zana-marketplace/warcraft-voices/):
+
+```sh
+zcc marketplace install warcraft-voices@zana-community
+```
+
+Or install the published release directly:
+
 ```sh
 zcc plugin install git:https://github.com/grebmann1/zcc-plugin-warcraft-voices.git@v0.2.0
 ```
@@ -65,7 +73,7 @@ zcc plugin dev . --once
 
 `zcc` must come from the matching Zana installation or checkout. `zcc plugin build` compiles the editable `server.ts` and `app.tsx` siblings into the declared JavaScript entries and refreshes the scaffold SDK declarations. Commit `server.mjs`, `app.js` and their metadata when publishing a release; Git installs use these prebuilt entries. Do not commit downloaded game audio or your plugin database.
 
-`npm test -- --coverage` enforces 80% statement, line, branch and function coverage. Tests use Node's built-in `node:sqlite`, without replacing any Electron native addon. Follow `LIVE_TEST.md` for actual app verification. This repository is distributed directly from GitHub; it is not listed in a marketplace.
+`npm test -- --coverage` enforces 80% statement, line, branch and function coverage. Tests use Node's built-in `node:sqlite`, without replacing any Electron native addon. Follow `LIVE_TEST.md` for actual app verification. The public Zana community marketplace points to the compiled GitHub release.
 
 
 ## Settings placement
