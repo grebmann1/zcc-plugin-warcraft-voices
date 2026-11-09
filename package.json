@@ -1,6 +1,6 @@
 {
   "name": "@zcc-ext/warcraft-voices",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "engines": {
     "zcc": ">=1.0.0",
@@ -13,8 +13,8 @@
     "branding": {
       "icon": "Swords"
     },
-    "server": "./server.ts",
-    "app": "./app.tsx"
+    "server": "./server.mjs",
+    "app": "./app.js"
   },
   "scripts": {
     "test": "vitest run",
@@ -22,16 +22,25 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@zana-ai/zcc-plugin-sdk": "0.1.0",
     "@testing-library/react": "^16.3.2",
     "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "jsdom": "^26.1.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "vitest": "^4.1.10",
     "@vitest/coverage-v8": "^4.1.10",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "@types/node": "^22.0.0"
   },
   "license": "MIT",
-  "private": true
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/grebmann1/zcc-plugin-warcraft-voices.git"
+  },
+  "homepage": "https://github.com/grebmann1/zcc-plugin-warcraft-voices#readme",
+  "bugs": {
+    "url": "https://github.com/grebmann1/zcc-plugin-warcraft-voices/issues"
+  }
 }

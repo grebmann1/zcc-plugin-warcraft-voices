@@ -1,9 +1,9 @@
 import { callPluginRpc, type PluginAgentActivitySnapshot, type PluginContentScriptContext } from '@zana-ai/zcc-plugin-sdk/app';
 import { SoundPolicy } from './policy.js';
 import { SoundPlayer } from './player.js';
-import { createClipPicker, type SoundState } from './model.js';
+import { createClipPicker, cuePackId, type SoundState } from './model.js';
 
-let status = 'Starting sound notifications…';
+let status = 'Choose this provider in Settings → Notifications to enable automatic sounds.';
 const listeners = new Set<() => void>();
 export const runtimeStatus = { get: () => status, subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; } };
 function report(message: string) { status = message; listeners.forEach(listener => listener()); }
@@ -28,8 +28,8 @@ export function mountBackground(context: PluginContentScriptContext): () => void
     let state = await callPluginRpc(context.pluginId, 'read') as SoundState;
     if (controller.signal.aborted) return;
     const player = new SoundPlayer(), pick = createClipPicker();
-    policy = new SoundPolicy(() => state.preferences, cue => {
-      const clip = state.pack ? pick(state.pack, cue) : undefined;
+    policy = new SoundPolicy(() => ({ ...state.preferences, enabled: true }), cue => {
+      const clip = state.pack ? pick({ ...state.pack, id: cuePackId(state.preferences, cue) }, cue) : undefined;
       if (!clip) return;
       void player.play(cue, state.preferences.volume, clip).catch(error => report(`Playback failed: ${error instanceof Error ? error.message : String(error)}`));
     });

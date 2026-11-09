@@ -13,7 +13,7 @@ it('starts silent, installs once, selects and previews independently, pauses, pe
   await rpc('install', 'peon'); await rpc('install', 'peon'); expect(download).toHaveBeenCalledTimes(1);
   await rpc('configure', { enabled: true, volume: 1000 }); await rpc('install', 'peasant');
   expect(await rpc('preview', { id: 'peon', cue: 'needs-you' })).toMatchObject({ id: 'peon' });
-  expect(await rpc('read')).toMatchObject({ preferences: { packId: 'peasant', volume: 100 } });
+  expect(await rpc('read')).toMatchObject({ preferences: { packId: 'peon', needsYouPackId: 'peon', idlePackId: 'peon', volume: 100 } });
   await rpc('configure', { packId: 'peon' }); await rpc('pause', true);
   const state = await rpc('read') as SoundState; expect(state.preferences.pausedUntil).toBeGreaterThan(Date.now());
   await rpc('configure', { pausedUntil: 0 }); expect((await rpc('read') as SoundState).preferences.pausedUntil).toBe(state.preferences.pausedUntil);
@@ -24,8 +24,38 @@ it('starts silent, installs once, selects and previews independently, pauses, pe
 });
 it('rejects invalid commands without changing durable state', async () => {
   const { rpc } = await setup();
-  for (const [method, input] of [['install', '../escape'], ['install', null], ['configure', { packId: 'missing' }], ['remove', 1], ['remove','peon'], ['preview',null], ['preview',{ id: 'peon', cue: 'oops' }], ['preview',{ id: 'peon', cue: 'idle' }], ['pause', 'yes']]) await expect(rpc(method as string, input)).rejects.toThrow();
+  for (const [method, input] of [['install', '../escape'], ['install', null], ['configure', { packId: 'missing' }], ['configure', { needsYouPackId: 'peasant' }], ['configure', { idlePackId: '../escape' }], ['configure', { idle: true }], ['remove', 1], ['remove','peon'], ['preview',null], ['preview',{ id: 'peon', cue: 'oops' }], ['preview',{ id: 'peon', cue: 'idle' }], ['pause', 'yes']]) await expect(rpc(method as string, input)).rejects.toThrow();
   await rpc('configure', null); expect(await rpc('read')).toMatchObject({ preferences: DEFAULTS, installed: [] });
+});
+it('mixes event audio, preserves assignments on download, persists and handles removal without fallback', async () => {
+  const { rpc, zcc } = await setup();
+  const orc = { ...clip, name: 'orc-request.wav' }, human = { ...clip, name: 'human-idle.wav' };
+  download.mockResolvedValueOnce({ id: 'peon', needsYou: [orc], idle: [clip] });
+  await rpc('install', 'peon');
+  download.mockResolvedValueOnce({ id: 'peasant', needsYou: [clip], idle: [human] });
+  await rpc('install', 'peasant');
+  expect(await rpc('read')).toMatchObject({ preferences: { needsYouPackId: 'peon', idlePackId: 'peon' } });
+  await rpc('configure', { needsYouPackId: 'peon', idlePackId: 'peasant', idle: true, enabled: true });
+  expect(await rpc('read')).toMatchObject({ preferences: { needsYouPackId: 'peon', idlePackId: 'peasant' }, pack: { needsYou: [orc], idle: [human] } });
+  await rpc('install', 'wc3_grunt');
+  await createPlugin(zcc, download);
+  expect(await rpc('read')).toMatchObject({ preferences: { needsYouPackId: 'peon', idlePackId: 'peasant' }, pack: { needsYou: [orc], idle: [human] } });
+  await rpc('remove', 'peon');
+  expect(await rpc('read')).toMatchObject({ preferences: { enabled: true, needsYou: false, idle: true, needsYouPackId: 'peon', idlePackId: 'peasant' }, pack: { needsYou: [], idle: [human] } });
+  await expect(rpc('configure', { needsYou: true })).rejects.toThrow('Download');
+  await rpc('install', 'peon');
+  expect(await rpc('read')).toMatchObject({ preferences: { needsYou: false, idlePackId: 'peasant' } });
+  await rpc('configure', { packId: 'wc3_grunt' });
+  expect(await rpc('read')).toMatchObject({ preferences: { needsYouPackId: 'wc3_grunt', idlePackId: 'wc3_grunt' } });
+});
+it('migrates durable single-character preferences and leaves missing assignments silent', async () => {
+  const { rpc, zcc } = await setup();
+  await rpc('install', 'peasant');
+  zcc.storage.database().prepare('UPDATE preferences SET data=? WHERE id=1').run(JSON.stringify({ enabled: false, packId: 'peasant', idle: true, volume: 40 }));
+  await createPlugin(zcc, download);
+  expect(await rpc('read')).toMatchObject({ preferences: { needsYouPackId: 'peasant', idlePackId: 'peasant', idle: true, volume: 40 }, pack: { id: 'peasant' } });
+  await rpc('remove', 'peasant');
+  expect(await rpc('read')).toMatchObject({ preferences: { needsYouPackId: 'peasant', idlePackId: 'peasant', needsYou: false, idle: false }, pack: undefined });
 });
 it('rolls back audio insertion, removal and selection when preferences fail, then recovers', async () => {
   const { rpc, zcc } = await setup(), db = zcc.storage.database();

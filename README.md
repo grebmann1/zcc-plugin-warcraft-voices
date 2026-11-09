@@ -5,22 +5,36 @@ An independent Zana Command Center plugin. Orc Peon, Human Peasant, Orc Grunt an
 ## Use
 
 ```sh
-zcc plugin install /path/to/warcraft-voices
+zcc plugin install git:https://github.com/grebmann1/zcc-plugin-warcraft-voices.git@v0.2.0
 ```
 
-Open **Plugins → Warcraft Voices**, download a character, and preview either alert. Downloads happen only when requested. Then enable **Sound notifications**. Automatic notifications require a host containing PR #685's optional activity APIs. Older hosts show an update message and still support downloads and manual previews.
+The repository includes compiled runtime files, so installing it needs no Node dependencies or build step.
+
+Open **Settings → Notifications → Sounds**, select **Warcraft Voices**, download the characters you want, and choose **Needs you voice** and **Idle voice** separately. For example, choose **Orc Peon** for Needs you and **Human Peasant** for Idle. Turn on **Becomes idle** if you want idle notifications, and preview either alert. Downloads happen only when requested. Then enable **Play notification sounds**. Automatic notifications require a host supporting the `notificationSoundProvider` slot and optional activity APIs. Older hosts keep downloads and manual previews in the plugin Configure section, with automatic playback off.
 
 Defaults: notifications off, Needs you on, idle off, volume 25%. Input alerts are limited to once every ten seconds across agents. Idle waits five seconds, then uses a global 30-second spacing (15/30/60 available). New agents seed silently; idle does not mean success. Pause suppresses new automatic alerts for 30 minutes. Manual previews still work while disabled or paused. Clips rotate without adjacent repeats when several are available, play one at a time, and stop after at most eight seconds. Input takes priority over idle.
 
-Only one sound implementation should be enabled. Turn off Sound Studio notifications and any separate built-in chimes before enabling Warcraft Voices. Plugins have independent settings; installing a new one does not silently override another.
+The host runs one selected sound provider. Selecting Warcraft Voices turns playback off until explicitly enabled, and built-in chimes and other registered providers stay silent while it is active. Installing a plugin does not change the active provider. Legacy independent audio content scripts must migrate to this contract.
+
+## Mix voices by alert
+
+**Voices by alert** has separate character selectors and previews for input requests and idle alerts. Both can use the same character or different characters. Downloading another character does not change your assignments or turn an alert on. Each library card also has a **Use for both** shortcut, which changes both voice choices while preserving event toggles.
+
+Existing single-character settings migrate to that character for both alerts. Removing an assigned character turns off only the affected alert types, retains their assignments, and never substitutes another voice. Choose a downloaded replacement and re-enable that alert when ready. Downloading the removed character again does not silently re-enable its alerts.
+
+## Warcraft interface
+
+The plugin keeps its own dark stone and bronze palette inside light or dark Settings. Original vector faction crests, compact alert cards and a bounded character roster give the controls a Warcraft-inspired appearance without remote fonts or game images. The themed voice menus support arrow keys, Home/End, typeahead, Enter/Space, Escape and Tab; downloaded voices are selectable and unavailable voices point to the character library. Menus render in a viewport-confined portal and release their listeners when closed or unmounted. Narrow panels stack the alert cards and character roster.
+
+To reskin a fork, change `styles.ts` and `crest.tsx`. The voice menu lives in `voice-picker.tsx`; it uses React and the public plugin SDK without private host UI imports.
 
 ## Bring your own rules
 
-Fork this folder, change the package name to give the plugin a unique ID, and install your copy. Change `policy.ts` for event timing, `runtime.ts` for background behavior, `player.ts` for playback, and `catalog.json` / `download.ts` for a curated source. For arbitrary local audio imports, start from Sound Studio's `plugins/agent-sounds` example instead.
+Fork this folder, change the package name to give the plugin a unique ID, and install your copy. Change `policy.ts` for event timing, `runtime.ts` for background behavior, `player.ts` for playback, and `catalog.json` / `download.ts` for a curated source. For personal MP3, WAV or OGG files, use **Settings → Notifications → Sounds → Built-in sounds → Upload audio**; no plugin is required. Sound Studio in the Zana repository is an example for more advanced sound plugins.
 
 There is no private host import, hook installer, audio daemon, shell command or PeonPing executable. The background script uses `experimental_observeAgents`, own-plugin realtime signals and a Web Lock to elect one player across main windows. Disable/reload releases the subscriptions, timers, audio and lock. Alerts continue while the plugin page is closed. The panel's manual preview stops on unmount.
 
-Character audio and settings use the plugin SQLite database. Writes are serialized, queue admission is bounded, and downloads/removals commit together with selection changes. Failed or cancelled downloads do not persist partial characters. Only the selected character's audio crosses normal read RPCs.
+Character audio and settings use the plugin SQLite database. Writes are serialized, queue admission is bounded, and downloads/removals commit together with selection changes. Failed or cancelled downloads do not persist partial characters. Only the clips assigned to the two alert types cross normal read RPCs; the downloaded library stays in storage.
 
 ## Audio and credits
 
@@ -32,14 +46,40 @@ Downloads are restricted to the pinned GitHub raw source, reject redirects and i
 
 ## Develop and verify
 
+The plugin SDK is not currently published on public npm. For development, build and pack it from a Zana checkout containing the notification sound provider API:
+
 ```sh
-npm install
-npm test
+# In your Zana checkout (Node 22.13+, pnpm from packageManager):
+pnpm install --frozen-lockfile
+pnpm --filter @zana-ai/zcc-plugin-sdk build
+pnpm --filter @zana-ai/zcc-plugin-sdk pack --pack-destination /tmp
+
+# In this plugin checkout:
+npm install --no-save /tmp/zana-ai-zcc-plugin-sdk-0.1.0.tgz
+npm test -- --coverage
 npm run typecheck
 npm run build
+# Optional, after a local path install:
 zcc plugin dev . --once
 ```
 
-`npm test -- --coverage` enforces 80% statement, line, branch and function coverage. Tests use Node's built-in `node:sqlite` (Node 22.13+), without replacing any Electron native addon. Dependencies here are linked to the local checkout's published SDK facade for development; normal consumers can install the public package.
+`zcc` must come from the matching Zana installation or checkout. `zcc plugin build` compiles the editable `server.ts` and `app.tsx` siblings into the declared JavaScript entries and refreshes the scaffold SDK declarations. Commit `server.mjs`, `app.js` and their metadata when publishing a release; Git installs use these prebuilt entries. Do not commit downloaded game audio or your plugin database.
 
-`zcc plugin build` refreshes the scaffold SDK declaration from the executing host. Typechecking uses the installed public SDK package declarations; use an SDK build containing the new activity APIs. The `types/` scaffold copy is retained for reference. Follow `LIVE_TEST.md` for actual app verification. No marketplace publication has been performed.
+`npm test -- --coverage` enforces 80% statement, line, branch and function coverage. Tests use Node's built-in `node:sqlite`, without replacing any Electron native addon. Follow `LIVE_TEST.md` for actual app verification. This repository is distributed directly from GitHub; it is not listed in a marketplace.
+
+
+## Settings placement
+
+Select this plugin in **Settings → Notifications → Sounds**. The host master
+controls automatic playback; selecting a provider leaves sounds off until you
+explicitly enable them. The provider owns its clips, volume and alert policy.
+Installed plugins retains installation/update/disable/removal controls and links
+to Configure sounds. The old panel URL remains unlisted for existing bookmarks.
+No other registered sound provider or built-in chimes plays while this provider
+is active. Legacy independent content scripts must migrate to this contract.
+
+The notificationSoundProvider slot requires a supporting Zana host. Older hosts
+show controls in the plugin Configure section, keep previews available and leave
+automatic audio off. Existing packs and preferences remain stored. The legacy
+plugin enabled preference is retained for compatibility; the new host master is
+the authority for provider runtime activation.

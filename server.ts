@@ -12,9 +12,14 @@ export async function createPlugin(zcc: ZccPluginApi, download = downloadCharact
     const row = db.prepare('SELECT data FROM voices WHERE id=?').get(id) as { data: string } | undefined;
     return row ? JSON.parse(row.data) : undefined;
   };
-  const view = (): SoundState => ({ preferences: config,
-    installed: (db.prepare('SELECT id FROM voices LIMIT 4').all() as { id: string }[]).map(row => row.id),
-    pack: load(config.packId) });
+  const view = (): SoundState => {
+    const needsYou = load(config.needsYouPackId);
+    const idle = config.idlePackId === config.needsYouPackId ? needsYou : load(config.idlePackId);
+    return { preferences: config,
+      installed: (db.prepare('SELECT id FROM voices LIMIT 4').all() as { id: string }[]).map(row => row.id),
+      // Send only the assigned event clips, never the whole downloaded library.
+      pack: needsYou || idle ? { id: config.packId, needsYou: needsYou?.needsYou ?? [], idle: idle?.idle ?? [] } : undefined };
+  };
   let pending = Promise.resolve<unknown>(undefined), admitted = 0;
   type Change = { next: Preferences; pack?: VoicePack; remove?: string };
   const mutate = (change: () => Promise<Change> | Change) => {
@@ -36,9 +41,14 @@ export async function createPlugin(zcc: ZccPluginApi, download = downloadCharact
   zcc.rpc.method('read', view);
   zcc.rpc.method('configure', input => mutate(() => {
     const v = input && typeof input === 'object' ? input as Partial<Preferences> : {};
-    if (v.packId !== undefined && (!CATALOG.some(c => c.id === v.packId) || !load(v.packId))) throw new Error('Download this character first.');
-    const next = preferences({ ...config, ...v, pausedUntil: config.pausedUntil });
-    if (next.enabled && !load(next.packId)) throw new Error('Download a character before enabling notifications.');
+    for (const id of [v.packId, v.needsYouPackId, v.idlePackId]) {
+      if (id !== undefined && (!CATALOG.some(c => c.id === id) || !load(id))) throw new Error('Download this character first.');
+    }
+    // Retain the legacy single-character RPC as an explicit "use for both" shortcut.
+    const both = v.packId === undefined ? {} : { needsYouPackId: v.packId, idlePackId: v.packId };
+    const next = preferences({ ...config, ...v, ...both, pausedUntil: config.pausedUntil });
+    if ((next.enabled && next.needsYou || v.needsYou === true) && !load(next.needsYouPackId)?.needsYou.length
+      || (next.enabled && next.idle || v.idle === true) && !load(next.idlePackId)?.idle.length) throw new Error('Download a character for this alert before enabling notifications.');
     return { next };
   }));
   zcc.rpc.method('pause', input => mutate(() => {
@@ -50,11 +60,13 @@ export async function createPlugin(zcc: ZccPluginApi, download = downloadCharact
     if (!character) throw new Error('Unknown Warcraft character.');
     // No archive extraction or executable installer. Only pinned, verified audio.
     const pack = load(character.id) ? undefined : await download(character, controller.signal);
-    return { next: { ...config, packId: character.id }, pack };
+    return { next: config, pack };
   }));
   zcc.rpc.method('remove', input => mutate(() => {
     if (typeof input !== 'string' || !load(input)) throw new Error('Character is not downloaded.');
-    return { next: { ...config, enabled: config.packId === input ? false : config.enabled }, remove: input };
+    const needsYou = config.needsYou && config.needsYouPackId !== input;
+    const idle = config.idle && config.idlePackId !== input;
+    return { next: { ...config, needsYou, idle, enabled: config.enabled && (needsYou || idle) }, remove: input };
   }));
   zcc.rpc.method('preview', input => {
     const v = input as { id?: unknown; cue?: unknown } | null;

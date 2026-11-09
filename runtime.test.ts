@@ -69,3 +69,20 @@ it('does not create a player when disposed during its initial settings read', as
   resolve({ preferences: DEFAULTS, installed: [], pack }); await tick();
   expect(context.experimental_onSignal).not.toHaveBeenCalled(); expect(h.play).not.toHaveBeenCalled();
 });
+
+it('uses the host master even when the retained legacy plugin preference was off', async () => {
+  h.call.mockResolvedValue({ preferences: { ...DEFAULTS, enabled: false }, pack });
+  mountBackground(context); await tick(); listener(snapshot('needs-you'));
+  expect(h.play).toHaveBeenCalledWith('needs-you', 25, clip);
+});
+it('plays the assigned character for each event while the controls are closed', async () => {
+  const orc = { ...clip, name: 'orc-request.wav' }, human = { ...clip, name: 'human-idle.wav' };
+  h.call.mockResolvedValue({ preferences: { ...DEFAULTS, needsYouPackId: 'peon', idlePackId: 'peasant', idle: true },
+    installed: ['peon', 'peasant'], pack: { id: 'peon', needsYou: [orc], idle: [human] } });
+  mountBackground(context); await tick();
+  listener(snapshot('idle')); vi.advanceTimersByTime(5000);
+  expect(h.play).toHaveBeenLastCalledWith('idle', 25, human);
+  listener(snapshot('needs-you'));
+  expect(h.play).toHaveBeenLastCalledWith('needs-you', 25, orc);
+  expect(h.play).toHaveBeenCalledTimes(2);
+});
