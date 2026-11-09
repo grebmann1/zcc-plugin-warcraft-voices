@@ -12,3 +12,5 @@ Use the intended running Zana instance. Do not modify session credentials or ins
 6. Record unit coverage, typecheck, public build, live panel behavior and private Electron results. On an older installed host, record the automatic-alert update message; do not claim live automatic notifications worked there.
 
 Keep the requested plugin installed. Use `zcc plugin logs warcraft-voices -n 30` for backend errors. No app replacement/restart or marketplace publishing is part of this verification.
+
+For a published Git install, set `WARCRAFT_PLUGIN_GIT_URL=https://github.com/grebmann1/zcc-plugin-warcraft-voices.git` when running the copied verification spec. This exercises the host's Git installer and committed JavaScript bundles instead of a local source directory.

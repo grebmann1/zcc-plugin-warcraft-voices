@@ -10,9 +10,14 @@ test.use({ launchEnv: { ZCC_FAKE_PROVIDER: '1' }, initialConfig: { sponsorPrompt
 test('independent Warcraft plugin mixes verified voices by alert, previews, pauses, reloads and disposes in built Electron', async ({ app, home }, info) => {
   test.setTimeout(180_000);
   const win = app.window, source = join(home, 'warcraft-plugin');
-  cpSync(resolve(process.env.WARCRAFT_PLUGIN_SOURCE ?? '../extensions/warcraft-voices'), source, { recursive: true, filter: path => !['node_modules', 'coverage', '.git', '.test-artifacts'].some(part => path.split('/').includes(part)) });
-  await stubOpenDialog(app.electron, [[source]]); await stubNativeDialogs(app.electron, [0, 0, 0]);
-  expect(await win.evaluate(() => window.cc.extensions.install({ kind: 'localDir' }))).toMatchObject({ ok: true });
+  await stubNativeDialogs(app.electron, [0, 0, 0]);
+  if (process.env.WARCRAFT_PLUGIN_GIT_URL) {
+    expect(await win.evaluate(url => window.cc.extensions.install({ kind: 'git', url }), process.env.WARCRAFT_PLUGIN_GIT_URL)).toMatchObject({ ok: true });
+  } else {
+    cpSync(resolve(process.env.WARCRAFT_PLUGIN_SOURCE ?? '../extensions/warcraft-voices'), source, { recursive: true, filter: path => !['node_modules', 'coverage', '.git', '.test-artifacts'].some(part => path.split('/').includes(part)) });
+    await stubOpenDialog(app.electron, [[source]]);
+    expect(await win.evaluate(() => window.cc.extensions.install({ kind: 'localDir' }))).toMatchObject({ ok: true });
+  }
   await expect.poll(() => win.evaluate(async () => (await window.cc.pluginApps.list()).find(p => p.id === 'warcraft-voices')?.status)).toBe('running');
   const route = async (path: string) => { await win.evaluate(path => { history.pushState({}, '', path); dispatchEvent(new PopStateEvent('popstate')); }, path); };
   await route('/settings/notifications');
