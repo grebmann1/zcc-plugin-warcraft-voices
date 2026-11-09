@@ -25,7 +25,8 @@ jobs:
         working-directory: host
       - run: pnpm --filter @zana-ai/zcc-plugin-sdk pack --pack-destination "$RUNNER_TEMP/sdk"
         working-directory: host
-      - run: npm install --no-save --package-lock=false "$RUNNER_TEMP/sdk/zana-ai-zcc-plugin-sdk-0.1.0.tgz"
+      # Match the npm version used by the clean-copy release check.
+      - run: npx --yes npm@11.20.0 install --no-save --package-lock=false "$RUNNER_TEMP/sdk/zana-ai-zcc-plugin-sdk-0.1.0.tgz"
         working-directory: plugin
       - run: npm test -- --coverage
         working-directory: plugin

@@ -55,7 +55,7 @@ pnpm --filter @zana-ai/zcc-plugin-sdk build
 pnpm --filter @zana-ai/zcc-plugin-sdk pack --pack-destination /tmp
 
 # In this plugin checkout:
-npm install --no-save /tmp/zana-ai-zcc-plugin-sdk-0.1.0.tgz
+npx --yes npm@11.20.0 install --no-save --package-lock=false /tmp/zana-ai-zcc-plugin-sdk-0.1.0.tgz
 npm test -- --coverage
 npm run typecheck
 npm run build

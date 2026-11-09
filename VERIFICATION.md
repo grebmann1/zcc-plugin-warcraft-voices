@@ -88,3 +88,5 @@ A clean plugin copy installed the packed SDK from the matching public Zana sourc
 Built Electron integration on Zana sound-settings commit `9189ad843227d39e8d92796b48fa0e3b2979d899` passed the complete independent plugin test: pinned real character downloads, Orc Peon input / Human Peasant idle assignment, Chromium audio previews and automatic background alerts, pause/resume, persistence across reload, themed keyboard menus, narrow light-theme rendering, multi-window player exclusion and disposal. The test used an isolated home and left the user's settings unchanged.
 
 Run the integration test from a compatible Zana checkout by copying `verification/warcraft-voices-plugin.spec.ts` into `e2e/`, setting `WARCRAFT_PLUGIN_SOURCE` to this plugin checkout, and running it with `pnpm test:e2e -- <copied-spec>`.
+
+Published Git installation was then verified from `https://github.com/grebmann1/zcc-plugin-warcraft-voices.git` through the real built-Electron Git installer. The complete test passed in 29 seconds, using committed prebuilt runtime entries and downloading audio on demand.
